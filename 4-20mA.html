@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-20mA & Raw Value Calculator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #005a9c;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .input-group {
+            margin-bottom: 1rem;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .input-row {
+            display: flex;
+            gap: 1rem;
+        }
+        .input-row .input-group {
+            flex: 1;
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        button {
+            flex: 1;
+            padding: 0.8rem;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #btnFromPV { background-color: #007bff; }
+        #btnFromPV:hover { background-color: #0056b3; }
+        #btnFromMA { background-color: #28a745; }
+        #btnFromMA:hover { background-color: #1e7e34; }
+        .results-container {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: #e9f5ff;
+            border-left: 5px solid #007bff;
+            border-radius: 6px;
+        }
+        .results-container h2 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #005a9c;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .result-item span:first-child {
+            color: #333;
+            font-weight: bold;
+        }
+        .result-item span:last-child {
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: #005a9c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>4-20mA Universal Calculator 📟</h1>
+
+    <div class="input-row">
+        <div class="input-group">
+            <label for="pvMin">Process Min (e.g., 0)</label>
+            <input type="number" id="pvMin" value="0">
+        </div>
+        <div class="input-group">
+            <label for="pvMax">Process Max (e.g., 100)</label>
+            <input type="number" id="pvMax" value="100">
+        </div>
+    </div>
+    <div class="input-row">
+        <div class="input-group">
+            <label for="rawMin">Raw Value Min (e.g., 0)</label>
+            <input type="number" id="rawMin" value="0">
+        </div>
+        <div class="input-group">
+            <label for="rawMax">Raw Value Max (e.g., 32767)</label>
+            <input type="number" id="rawMax" value="32767">
+        </div>
+    </div>
+
+    <hr style="border: 1px solid #eee; margin: 2rem 0;">
+    
+    <div class="input-group">
+        <label for="currentPV">Known Process Value</label>
+        <input type="number" id="currentPV" placeholder="e.g., 50">
+    </div>
+    <div class="input-group">
+        <label for="currentMA">Known mA Reading</label>
+        <input type="number" id="currentMA" placeholder="e.g., 12">
+    </div>
+
+    <div class="button-group">
+        <button id="btnFromPV" onclick="calculateFromPV()">Calculate from Process Value</button>
+        <button id="btnFromMA" onclick="calculateFromMA()">Calculate from mA</button>
+    </div>
+
+    <div class="results-container">
+        <h2>Results</h2>
+        <div class="result-item">
+            <span>Process Value:</span>
+            <span id="resultPV">--</span>
+        </div>
+        <div class="result-item">
+            <span>Current (mA):</span>
+            <span id="resultMA">-- mA</span>
+        </div>
+        <div class="result-item">
+            <span>Raw Value:</span>
+            <span id="resultRaw">--</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getRangeValues() {
+        const pvMin = parseFloat(document.getElementById('pvMin').value);
+        const pvMax = parseFloat(document.getElementById('pvMax').value);
+        const rawMin = parseFloat(document.getElementById('rawMin').value);
+        const rawMax = parseFloat(document.getElementById('rawMax').value);
+        
+        if (isNaN(pvMin) || isNaN(pvMax) || isNaN(rawMin) || isNaN(rawMax)) {
+            alert("Please ensure all range fields (Min/Max) are filled with valid numbers.");
+            return null;
+        }
+        return { pvMin, pvMax, rawMin, rawMax };
+    }
+
+    function calculateFromPV() {
+        const ranges = getRangeValues();
+        if (!ranges) return;
+        
+        const currentPV = parseFloat(document.getElementById('currentPV').value);
+        if (isNaN(currentPV)) {
+            alert("Please enter a valid Process Value.");
+            return;
+        }
+
+        const { pvMin, pvMax, rawMin, rawMax } = ranges;
+        const percentage = (currentPV - pvMin) / (pvMax - pvMin);
+
+        // Calculate mA
+        const maSpan = 20 - 4;
+        const calculatedMA = (percentage * maSpan) + 4;
+
+        // Calculate Raw
+        const rawSpan = rawMax - rawMin;
+        const calculatedRaw = (percentage * rawSpan) + rawMin;
+
+        updateResults(currentPV, calculatedMA, calculatedRaw);
+    }
+
+    function calculateFromMA() {
+        const ranges = getRangeValues();
+        if (!ranges) return;
+        
+        const currentMA = parseFloat(document.getElementById('currentMA').value);
+        if (isNaN(currentMA)) {
+            alert("Please enter a valid mA Reading.");
+            return;
+        }
+
+        const { pvMin, pvMax, rawMin, rawMax } = ranges;
+        const percentage = (currentMA - 4) / (20 - 4);
+
+        // Calculate Process Value
+        const pvSpan = pvMax - pvMin;
+        const calculatedPV = (percentage * pvSpan) + pvMin;
+
+        // Calculate Raw
+        const rawSpan = rawMax - rawMin;
+        const calculatedRaw = (percentage * rawSpan) + rawMin;
+
+        updateResults(calculatedPV, currentMA, calculatedRaw);
+    }
+
+    function updateResults(pv, ma, raw) {
+        document.getElementById('resultPV').textContent = pv.toFixed(3);
+        document.getElementById('resultMA').textContent = ma.toFixed(3) + ' mA';
+        document.getElementById('resultRaw').textContent = Math.round(raw);
+    }
+</script>
+
+</body>
+</html>
